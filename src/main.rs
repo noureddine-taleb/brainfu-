@@ -3,6 +3,53 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 
+enum OpCode {
+    IncDataPointer,
+    DecDataPointer,
+    IncData,
+    DecData,
+    WriteChar,
+    ReadChar,
+    CondStart,
+    CondEnd,
+}
+
+impl TryFrom<char> for OpCode {
+    type Error = ();
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            '>' => {
+                Ok(OpCode::IncDataPointer)
+            }
+            '<' => {
+                Ok(OpCode::DecDataPointer)
+            }
+            '+' => {
+                Ok(OpCode::IncData)
+            }
+            '-' => {
+                Ok(OpCode::DecData)
+            }
+            '.' => {
+                Ok(OpCode::WriteChar)
+            }
+            ',' => {
+                Ok(OpCode::ReadChar)
+            }
+            '[' => {
+                Ok(OpCode::CondStart)
+            }
+            ']' => {
+                Ok(OpCode::CondEnd)
+            }
+    
+            _ => {
+                Err(())
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests;
 fn main() {
@@ -27,33 +74,34 @@ fn __execute(code: &[u8], memory: &mut [u8; 30000], dp: &mut u32, pc: &mut u32) 
 
     while *pc < code.len() as u32 {
         let opcode = code[*pc as usize] as char;
-        match opcode {
-            '>' => {
+
+        match opcode.try_into() {
+            Ok(OpCode::IncDataPointer) => {
                 *dp += 1;
                 *pc += 1;
                 retired += 1;
             }
-            '<' => {
+            Ok(OpCode::DecDataPointer) => {
                 *dp -= 1;
                 *pc += 1;
                 retired += 1;
             }
-            '+' => {
+            Ok(OpCode::IncData) => {
                 memory[*dp as usize] = memory[*dp as usize].overflowing_add(1).0;
                 *pc += 1;
                 retired += 1;
             }
-            '-' => {
+            Ok(OpCode::DecData) => {
                 memory[*dp as usize] = memory[*dp as usize].overflowing_sub(1).0;
                 *pc += 1;
                 retired += 1;
             }
-            '.' => {
+            Ok(OpCode::WriteChar) => {
                 print!("{}", memory[*dp as usize] as char);
                 *pc += 1;
                 retired += 1;
             }
-            ',' => {
+            Ok(OpCode::ReadChar) => {
                 let mut buf = [0_u8; 1];
                 let count = std::io::stdin().read(&mut buf).expect("can't read from stdin");
                 if count != 1 {
@@ -63,7 +111,7 @@ fn __execute(code: &[u8], memory: &mut [u8; 30000], dp: &mut u32, pc: &mut u32) 
                 *pc += 1;
                 retired += 1;
             }
-            '[' => {
+            Ok(OpCode::CondStart) => {
                 if memory[*dp as usize] == 0 {
                     *pc = brace_map.get(&*pc).unwrap() + 1;
                 } else {
@@ -71,7 +119,7 @@ fn __execute(code: &[u8], memory: &mut [u8; 30000], dp: &mut u32, pc: &mut u32) 
                 }
                 retired += 1;
             }
-            ']' => {
+            Ok(OpCode::CondEnd) => {
                 if memory[*dp as usize] != 0 {
                     *pc = brace_map.get(&*pc).unwrap() + 1;
                 } else {
