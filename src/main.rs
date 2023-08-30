@@ -49,7 +49,7 @@ fn __execute(code: &[u8], memory: &mut [u8; 30000], dp: &mut u32, pc: &mut u32) 
                 retired += 1;
             }
             '.' => {
-                println!("{:x}", memory[*dp as usize]);
+                print!("{}", memory[*dp as usize] as char);
                 *pc += 1;
                 retired += 1;
             }
